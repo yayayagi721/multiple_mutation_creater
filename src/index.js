@@ -6,7 +6,7 @@ const hogeMutaNonNull = { id: true, dist: false, atDate: false };
 const hogeMutaType = { id: 'ID', dist: 'Float', atDate: 'AWSDate' };
 const sampleObj = {
   hoge: {
-    mutationName: 'huga',
+    operationName: 'huga',
     input: {
       id: 'hogehoge',
       dist: 60,
@@ -17,7 +17,7 @@ const sampleObj = {
 let validateStr = '';
 Object.keys(sampleObj.hoge.input).forEach((key) => {
   validateStr += createValidate(key, hogeMutaType[key], hogeMutaNonNull[key]);
-  validateStr += '';
+  validateStr += ' ';
 });
 
 console.log(validateStr);
