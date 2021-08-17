@@ -1,70 +1,85 @@
-const sampleObj = {
-  hoge: {
-    mutationName: 'huga',
-    input: {
-      id: 'hogehoge',
-      dist: 60,
-      atDate: '2021-08-14',
-    },
-  },
-};
+import { MUTATION_NAME, QUERY_NAME, INDENT } from "./str-const";
 
-class MultipleGqlOperationBuilder {
-  constructor(gqlOperationInfos, operationType) {
-    this.gqlOperationInfos = gqlOperationInfos;
-    this.operationType = operationType;
-    this.validationStr = '';
-  }
+// const afterSampleObj = {
+//   operationName: "createHoge",
+//   value: {
+//     id: "hogehoge",
+//     dist: 60,
+//     atDate: "2021-08-14",
+//   },
+//   identification: {
+//     operationKey: "huga1",
+//     inputKey: "input1",
+//   },
+// };
 
-  putOperation(inputs) {
-    inputs.forEach((key) => {
-      this.validationStr += _createValidate(keyName, type, isNonNull) + ' ';
+export class MultipleGqlOperationBuilder {
+  constructor(gqlOperationInfos, rootType) {
+    this.gqlOperationInfos = {};
+    gqlOperationInfos.forEach((info) => {
+      this.gqlOperationInfos[info.operationName] = info;
     });
+    this.rootType = rootType;
+    this.inputs = [];
   }
 
-  build() {
-    return;
+  pushOperation(input) {
+    this.inputs.push(input);
   }
 
-  _createValidate(keyName, type, isNonNull) {
-    const sign = isNonNull ? '!' : '';
-    return indent + '$' + `${keyName}: ${type}${sign} `;
-  }
-}
+  createMultipleOperations() {
+    let validationStr = "";
+    let operationStr = "";
 
-const indent = '';
-let operationStrs = '';
+    let processedInputs = this.inputs.map((input, i) => {
+      const operationKey = `operation${i}`;
+      const inputKey = `input${i}`;
 
-export function createValidate(keyName, type, isNonNull) {
-  const sign = isNonNull ? '!' : '';
-  return indent + '$' + `${keyName}: ${type}${sign} `;
-}
-`mutation MultipleMutation (
-  $input: PutHogeParameterInput!
-) {
+      const identification = { operationKey: operationKey, inputKey: inputKey };
 
-}
-}`;
+      return { ...input, identification };
+    });
 
-const operationStr = `hogeParameter(input: $input){
-hogeId
-hogeFrequency
-}
-`;
+    console.log({ processedInputs });
 
-export const hoge = /* GraphQL */ `
-  mutation CreateHoge($input: CreateHogeInput!, $input2: CreateHogeInput!) {
-    hoge1: hoge(input: $input) {
-      id
-      name
-      createdAt
-      updatedAt
+    processedInputs.forEach((input, i) => {
+      this.validationStr +=
+        i > 0
+          ? ", "
+          : "" +
+            this.#createValidate(
+              input.identification.operationKey,
+              this.gqlOperationInfos[input.operationName].argsInfo.inputType,
+              this.gqlOperationInfos[input.operationName].argsInfo.isNonNull
+            );
+
+      this.operationStr += this.#createOperation(
+        input.identification.inputKey,
+        this.gqlOperationInfos[input.operationName].operationStr
+      );
+    });
+
+    let rootName;
+    if (this.rootType == "Mutation") {
+      rootName = MUTATION_NAME;
+    } else if (this.rootType == "Query") {
+      rootName = QUERY_NAME;
     }
-    hoge2: hoge(input: $input2) {
-      id
-      name
-      createdAt
-      updatedAt
+
+    return `${this.rootType} ${rootName}(${validationStr}) {
+    ${operationStr}
     }
+    `;
   }
-`;
+
+  #createValidate(keyName, type, isNonNull) {
+    const sign = isNonNull ? "!" : "";
+    return INDENT + "$" + `${keyName}: ${type}${sign} `;
+  }
+
+  // eslint-disable-next-line no-dupe-class-members
+  #createOperation(inputKey, operationStr) {
+    const pattern = /\$.+[,)]/;
+    return operationStr.replace(pattern, "$" + inputKey);
+  }
+}
